@@ -29,8 +29,8 @@ contract MockRollup is Rollup {
     rollback(_invalidBatchIndex, challenger);
   }
 
-  function _addTestQue(bytes32 root) external {
-    depositQues[depositPointer] = DepositQue({ root: root, newAccounts: true, submitted: false, exist: true });
+  function _addTestQue(bytes32 root, bool newAccounts) external {
+    depositQues[depositPointer] = DepositQue({ root: root, newAccounts: newAccounts, submitted: false, exist: true });
     depositPointer++;
   }
 

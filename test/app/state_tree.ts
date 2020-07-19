@@ -244,7 +244,7 @@ export class StateTree {
       return { witness, account: encoded, safe: true };
     } else {
       const witness = this.stateTree.witness(stateID).nodes;
-      return { witness, account: EMPTY_ACCOUNT, safe: false };
+      return { witness, account: EMPTY_ACCOUNT, safe: true };
     }
   }
 

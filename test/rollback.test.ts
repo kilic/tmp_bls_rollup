@@ -40,10 +40,10 @@ contract('Rollback', (eth_accounts) => {
     let rollbackBatchCount = 9;
 
     // make some filled deposit ques
-    await rollup._addTestQue(ZERO);
-    await rollup._addTestQue(ZERO);
-    await rollup._addTestQue(ZERO);
-    await rollup._addTestQue(ZERO);
+    await rollup._addTestQue(ZERO, true);
+    await rollup._addTestQue(ZERO, true);
+    await rollup._addTestQue(ZERO, true);
+    await rollup._addTestQue(ZERO, true);
     assert.equal(5, (await rollup.depositPointer()).toNumber());
 
     // add some more batches
@@ -84,9 +84,9 @@ contract('Rollback', (eth_accounts) => {
     assert.isTrue(depositQue.exist);
   });
 
-  it.skip('gas: rollback estimate cost for 25 batches', async function () {
+  it.skip('gas: rollback estimate cost for 250 batches', async function () {
     for (let i = 0; i < 250; i++) {
-      await rollup._addTestQue(ZERO);
+      await rollup._addTestQue(ZERO, true);
       await rollup._submitTestBatchWithDeposits(ZERO, ZERO, i + 1, { from: coordinatorA, value: STAKE });
     }
     assert.equal(250 + 1, (await rollup.batchPointer()).toNumber());

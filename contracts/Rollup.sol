@@ -47,7 +47,7 @@ contract Rollup is StakeManager, DepositManager {
   function rollback(uint256 _invalidBatchIndex, address payable challenger) internal {
     uint256 totalStake = 0;
     uint256 batchCounter = 0;
-    for (uint256 batchIndex = batchPointer; batchIndex >= _invalidBatchIndex; batchIndex--) {
+    for (uint256 batchIndex = batchPointer - 1; batchIndex >= _invalidBatchIndex; batchIndex--) {
       // TODO : check gas
       // if (gasleft() <= governance.MIN_GAS_LIMIT_LEFT()) {
       //   break;
@@ -210,7 +210,7 @@ contract Rollup is StakeManager, DepositManager {
   }
 
   function fraudInvalidTxRootBatchType0(batch.HeaderNoCommitType0 memory header, bytes memory txs) public {
-    require(header.batchIndex > 0, "Rollup: invalid batch index");
+    require(header.batchIndex > 0 && header.batchIndex < batchPointer, "Rollup: invalid batch index");
     bytes32 txCommit = keccak256(abi.encodePacked(txs));
     bytes32 batchID = batch.idType0(header, txCommit);
     require(batches[header.batchIndex].ID == batchID, "Rollup: cannot reconstruct batch");
@@ -228,7 +228,7 @@ contract Rollup is StakeManager, DepositManager {
     FraudProof.InvalidSignatureBatchType0 memory proof,
     bytes memory txs
   ) public {
-    require(header.batchIndex > 0, "Rollup: invalid batch index");
+    require(header.batchIndex > 0 && header.batchIndex < batchPointer, "Rollup: invalid batch index");
     bytes32 txCommit = keccak256(abi.encodePacked(txs));
     bytes32 batchID = batch.idType0(header, txCommit);
     require(batches[header.batchIndex].ID == batchID, "Rollup: cannot reconstruct batch");
@@ -246,7 +246,7 @@ contract Rollup is StakeManager, DepositManager {
     FraudProof.InvalidTransitionBatchType0 memory proof,
     bytes memory txs
   ) public {
-    require(header.batchIndex > 0, "Rollup: invalid batch index b0");
+    require(header.batchIndex > 0 && header.batchIndex < batchPointer, "Rollup: invalid batch index");
     bytes32 txCommit = keccak256(abi.encodePacked(txs));
     bytes32 batchID = batch.idType0(header, txCommit);
     require(batches[header.batchIndex].ID == batchID, "Rollup: cannot reconstruct batch b0");
@@ -260,7 +260,7 @@ contract Rollup is StakeManager, DepositManager {
   }
 
   function fraudInvalidTxRootBatchType1(batch.HeaderNoCommitType1 memory header, bytes memory txs) public {
-    require(header.batchIndex > 0, "Rollup: invalid batch index");
+    require(header.batchIndex > 0 && header.batchIndex < batchPointer, "Rollup: invalid batch index");
     bytes32 txCommit = keccak256(abi.encodePacked(txs));
     bytes32 batchID = batch.idType1(header, txCommit);
     require(batches[header.batchIndex].ID == batchID, "Rollup: cannot reconstruct batch");
@@ -273,12 +273,26 @@ contract Rollup is StakeManager, DepositManager {
     }
   }
 
+  function fraudInvalidDepositRootBatchType1(batch.HeaderNoCommitType1 memory header, bytes memory txs) public {
+    require(header.batchIndex > 0 && header.batchIndex < batchPointer, "Rollup: invalid batch index");
+    bytes32 txCommit = keccak256(abi.encodePacked(txs));
+    bytes32 batchID = batch.idType1(header, txCommit);
+    require(batches[header.batchIndex].ID == batchID, "Rollup: cannot reconstruct batch");
+    require(header.blockNumber + disputePeriod > block.number, "Rollup: batch is finalized");
+
+    if (0 != fraudProof.shouldRollbackInvalidDepositRootBatchType1(depositQues[header.queID].root, txs)) {
+      address payable challenger = msg.sender;
+      uint256 _invalidBatchIndex = header.batchIndex;
+      rollback(_invalidBatchIndex, challenger);
+    }
+  }
+
   function fraudInvalidTransitionBatchType1(
     batch.HeaderNoCommitType1 memory header,
     FraudProof.InvalidTransitionBatchType1 memory proof,
     bytes memory txs
   ) public {
-    require(header.batchIndex > 0, "Rollup: invalid batch index b0");
+    require(header.batchIndex > 0 && header.batchIndex < batchPointer, "Rollup: invalid batch index");
     bytes32 txCommit = keccak256(abi.encodePacked(txs));
     bytes32 batchID = batch.idType1(header, txCommit);
     require(batches[header.batchIndex].ID == batchID, "Rollup: cannot reconstruct batch b0");
@@ -291,8 +305,40 @@ contract Rollup is StakeManager, DepositManager {
     }
   }
 
+  function fraudInvalidDepositRootBatchType2(batch.HeaderNoCommitType2 memory header, bytes memory txs) public {
+    require(header.batchIndex > 0 && header.batchIndex < batchPointer, "Rollup: invalid batch index");
+    bytes32 txCommit = keccak256(abi.encodePacked(txs));
+    bytes32 batchID = batch.idType2(header, txCommit);
+    require(batches[header.batchIndex].ID == batchID, "Rollup: cannot reconstruct batch");
+    require(header.blockNumber + disputePeriod > block.number, "Rollup: batch is finalized");
+
+    if (0 != fraudProof.shouldRollbackInvalidDepositRootBatchType2(depositQues[header.queID].root, txs)) {
+      address payable challenger = msg.sender;
+      uint256 _invalidBatchIndex = header.batchIndex;
+      rollback(_invalidBatchIndex, challenger);
+    }
+  }
+
+  function fraudInvalidTransitionBatchType2(
+    batch.HeaderNoCommitType2 memory header,
+    FraudProof.InvalidTransitionBatchType2 memory proof,
+    bytes memory txs
+  ) public {
+    require(header.batchIndex > 0 && header.batchIndex < batchPointer, "Rollup: invalid batch index");
+    bytes32 txCommit = keccak256(abi.encodePacked(txs));
+    bytes32 batchID = batch.idType2(header, txCommit);
+    require(batches[header.batchIndex].ID == batchID, "Rollup: cannot reconstruct batch b0");
+    require(header.blockNumber + disputePeriod > block.number, "Rollup: batch is finalized");
+
+    if (0 != fraudProof.shouldRollbackInvalidTransitionBatchType2(batches[header.batchIndex - 1].state, header.state, proof, txs)) {
+      address payable challenger = msg.sender;
+      uint256 _invalidBatchIndex = header.batchIndex;
+      rollback(_invalidBatchIndex, challenger);
+    }
+  }
+
   function fraudInvalidTxRootBatchType3(batch.HeaderNoCommitType3 memory header, bytes memory txs) public {
-    require(header.batchIndex > 0, "Rollup: invalid batch index");
+    require(header.batchIndex > 0 && header.batchIndex < batchPointer, "Rollup: invalid batch index");
     bytes32 txCommit = keccak256(abi.encodePacked(txs));
     bytes32 batchID = batch.idType3(header, txCommit);
     require(batches[header.batchIndex].ID == batchID, "Rollup: cannot reconstruct batch");
@@ -310,7 +356,7 @@ contract Rollup is StakeManager, DepositManager {
     FraudProof.InvalidSignatureBatchType3 memory proof,
     bytes memory txs
   ) public {
-    require(header.batchIndex > 0, "Rollup: invalid batch index");
+    require(header.batchIndex > 0 && header.batchIndex < batchPointer, "Rollup: invalid batch index");
     bytes32 txCommit = keccak256(abi.encodePacked(txs));
     bytes32 batchID = batch.idType3(header, txCommit);
     require(batches[header.batchIndex].ID == batchID, "Rollup: cannot reconstruct batch");
@@ -328,7 +374,7 @@ contract Rollup is StakeManager, DepositManager {
     FraudProof.InvalidTransitionBatchType3 memory proof,
     bytes memory txs
   ) public {
-    require(header.batchIndex > 0, "Rollup: invalid batch index b0");
+    require(header.batchIndex > 0 && header.batchIndex < batchPointer, "Rollup: invalid batch index");
     bytes32 txCommit = keccak256(abi.encodePacked(txs));
     bytes32 batchID = batch.idType3(header, txCommit);
     require(batches[header.batchIndex].ID == batchID, "Rollup: cannot reconstruct batch b0");

@@ -348,7 +348,6 @@ contract FraudProof is FraudProofTreeUtils {
     require(batchSize > 0, "Rollup: empty batch");
     require(!txs.t1_hasExcessData(), "Rollup: excess tx data");
     bytes32 state = s0;
-
     for (uint256 i = 0; i < batchSize; i++) {
       // check empty leaf
       uint256 stateIndex = txs.t1_stateIdOf(i);
@@ -364,7 +363,7 @@ contract FraudProof is FraudProofTreeUtils {
       state = updateStateRoot(stateIndex, accountHash, proof.witnesses[i]);
     }
     if (state != s1) {
-      return 1;
+      return 2;
     }
     return 0;
   }
@@ -390,22 +389,20 @@ contract FraudProof is FraudProofTreeUtils {
       // check depositor inclusion in the state
       uint256 stateIndex = txs.t2_stateIdOf(i);
       require(checkStateInclusion(state, stateIndex, proof.accounts[i], proof.witnesses[i]), "Rollup: state inclusion top up");
-      if (proof.accounts[i].isEmptyAccount()) {
-        return 1;
+      // apply tx if account exists
+      if (!proof.accounts[i].isEmptyAccount()) {
+        // check token type
+        if (txs.t2_tokenIdOf(i) != proof.accounts[i].tokenID()) {
+          return 1;
+        }
+        // apply deposit diff
+        uint256 amount = txs.t2_amountOf(i);
+        (uint256 account, bool safe) = proof.accounts[i].balanceSafeAdd(amount);
+        if (safe) {
+          // apply deposit diff if it request is safe
+          state = updateStateRoot(stateIndex, account, proof.witnesses[i]);
+        }
       }
-      // check token type
-      if (txs.t2_tokenIdOf(i) != proof.accounts[i].tokenID()) {
-        return 2;
-      }
-      // apply deposit diff
-      uint256 amount = txs.t2_amountOf(i);
-      (uint256 account, bool safe) = proof.accounts[i].balanceSafeAdd(amount);
-      if (!safe) {
-        // FIX: this is not a fraud but an invalid deposit request.
-        // Possible fix might be to allow coordinator mark transactions invalid which sounds meh.
-        // Or checking that this tx not applied.
-      }
-      state = updateStateRoot(stateIndex, account, proof.witnesses[i]);
     }
     if (state != s1) {
       return 3;
