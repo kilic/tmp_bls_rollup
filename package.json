@@ -1,0 +1,26 @@
+{
+  "name": "orbls",
+  "version": "0.0.1",
+  "devDependencies": {
+    "@openzeppelin/contracts": "^3.1.0",
+    "@openzeppelin/test-helpers": "^0.5.6",
+    "@types/chai": "^4.2.11",
+    "@types/web3": "^1.2.2",
+    "bignumber.js": "^9.0.0",
+    "bn.js": "^5.1.2",
+    "chai": "^4.2.0",
+    "mcl-wasm": "^0.4.2",
+    "prettier": "^2.0.5",
+    "prettier-plugin-solidity": "^1.0.0-alpha.54",
+    "truffle-typings": "^1.0.8",
+    "typechain": "^1.0.5",
+    "typechain-target-truffle": "^1.0.2",
+    "typescript": "^3.9.6"
+  },
+  "scripts": {
+    "compile": "truffle compile",
+    "generate": "truffle compile && typechain --target truffle './build/**/*.json'",
+    "test": "truffle test",
+    "ganache": "ganache-cli -d -l 10000000"
+  }
+}
