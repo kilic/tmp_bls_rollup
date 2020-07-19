@@ -256,7 +256,8 @@ contract FraudProof is FraudProofTreeUtils {
     uint256[2][] memory messages = new uint256[2][](batchSize);
     for (uint256 i = 0; i < batchSize; i++) {
       uint256 accountID = txs.t0_senderOf(i);
-      // TODO: consider twice: what if account not exists?
+      // What if account not exists?
+      // Then this batch must be subjected to invalid state transition
       require(accountRegistry.exists(accountID, proof.pubkeys[i], proof.witnesses[i]), "Rollup: account does not exists");
       messages[i] = txs.t0_mapToPoint(i);
     }
