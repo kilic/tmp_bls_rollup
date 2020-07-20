@@ -110,4 +110,22 @@ contract('Fraud Proof Tree Utils', (accounts) => {
       assert.equal(root0, root1);
     }
   });
+
+  it.only('gas cost: check state inclusion', async function () {
+    const account = Account.new(10, 10, 10, 0);
+    stateTree.insertAccount(10, account);
+    const witness = stateTree.witness(10);
+    const encoded = account.encode();
+    const cost = await treeUtils.gasCostCheckStateInclusion.call(stateTree.root, 10, encoded, witness);
+    console.log(`gas cost check state inclusion: ${cost}`);
+  });
+  it.only('update state root', async function () {
+    const account = Account.new(10, 10, 10, 0);
+    stateTree.insertAccount(10, account);
+    const witness = stateTree.witness(10);
+    const encoded = account.encode();
+    const cost = await treeUtils.gasCostUpdateStateRoot.call(10, encoded, witness);
+    console.log(`gas cost update state root: ${cost}`);
+    console.log(`gas cost update state root: ${cost.toNumber()}`);
+  });
 });

@@ -21,12 +21,33 @@ contract TestFraudProofTreeUtils is FraudProofTreeUtils {
     return checkStateInclusion(root, stateIndex, account, witness);
   }
 
+  function gasCostCheckStateInclusion(
+    bytes32 root,
+    uint256 stateIndex,
+    uint256 account,
+    bytes32[STATE_WITNESS_LENGTH] memory witness
+  ) external returns (uint256) {
+    uint256 g = gasleft();
+    checkStateInclusion(root, stateIndex, account, witness);
+    return g - gasleft();
+  }
+
   function _updateStateRootWithAccount(
     uint256 stateIndex,
     uint256 account,
     bytes32[STATE_WITNESS_LENGTH] memory witness
   ) external pure returns (bytes32) {
     return updateStateRoot(stateIndex, account, witness);
+  }
+
+  function gasCostUpdateStateRoot(
+    uint256 stateIndex,
+    uint256 account,
+    bytes32[STATE_WITNESS_LENGTH] memory witness
+  ) external returns (uint256) {
+    uint256 g = gasleft();
+    updateStateRoot(stateIndex, account, witness);
+    return g - gasleft();
   }
 
   function _updateStateRootWithAccountHash(
