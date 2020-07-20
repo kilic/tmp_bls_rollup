@@ -58,7 +58,8 @@ export class StateTree {
     return this.stateTree.witness(stateID).nodes;
   }
 
-  public createAccount(stateID: number, account: Account) {
+  public createAccount(account: Account) {
+    const stateID = account.stateID;
     if (this.accounts[stateID]) {
       throw new Error('state id is in use');
     }

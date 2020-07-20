@@ -40,4 +40,15 @@ contract MockFraudProof is FraudProof {
     require(!txs.t3_hasExcessData(), "MockRollup: excess data");
     return calculateRoot(txs.t3_toLeafs());
   }
+
+  function gasCostInvalidTransitionBatchType0(
+    bytes32 s0,
+    bytes32 s1,
+    InvalidTransitionBatchType0 memory proof,
+    bytes calldata txs
+  ) external returns (uint256) {
+    uint256 operationCost = gasleft();
+    shouldRollbackInvalidTransitionBatchType0(s0, s1, proof, txs);
+    return operationCost - gasleft();
+  }
 }

@@ -111,7 +111,7 @@ contract('Fraud Proof Tree Utils', (accounts) => {
     }
   });
 
-  it.only('gas cost: check state inclusion', async function () {
+  it.skip('gas cost: check state inclusion', async function () {
     const account = Account.new(10, 10, 10, 0);
     stateTree.insertAccount(10, account);
     const witness = stateTree.witness(10);
@@ -119,7 +119,7 @@ contract('Fraud Proof Tree Utils', (accounts) => {
     const cost = await treeUtils.gasCostCheckStateInclusion.call(stateTree.root, 10, encoded, witness);
     console.log(`gas cost check state inclusion: ${cost}`);
   });
-  it.only('update state root', async function () {
+  it.skip('update state root', async function () {
     const account = Account.new(10, 10, 10, 0);
     stateTree.insertAccount(10, account);
     const witness = stateTree.witness(10);

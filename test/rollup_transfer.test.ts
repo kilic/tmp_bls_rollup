@@ -30,11 +30,8 @@ contract('Rollup transfer', (eth_accounts) => {
   const DISPUTE_PERIOD = 10;
   const initialBalance = 1000;
 
-  beforeEach(async function () {
+  before(async function () {
     await mcl.init();
-  });
-  
-  beforeEach(async function () {
     const registryContract = await BLSAccountRegistry.new();
     registry = await AccountRegistry.new(registryContract);
     fraudProof = await MockFraudProof.new(registryContract.address);
@@ -47,12 +44,77 @@ contract('Rollup transfer', (eth_accounts) => {
       const stateID = i;
       const account = Account.new(accountID, tokenID, initialBalance, 0);
       account.setStateID(stateID);
-      stateTree.createAccount(stateID, account);
       account.newKeyPair();
       accounts.push(account);
       await registry.register(account.encodePubkey());
     }
   });
+
+  beforeEach(async function () {
+    rollup = await MockRollup.new(STAKE, DISPUTE_PERIOD, fraudProof.address, DUMMY_ADDRESS, ZERO); // yay :)
+    STATE_TREE_DEPTH = (await fraudProof.STATE_TREE_DEPTH()).toNumber();
+    stateTree = StateTree.new(STATE_TREE_DEPTH);
+    for (let i = 0; i < accountSize; i++) {
+      stateTree.createAccount(accounts[i]);
+    }
+  });
+
+  it.skip('gas cost batch type 0: invalid state transition check', async function () {
+    let batchSize = 32;
+    const txs: Tx0[] = [];
+    const amount = 1;
+    let aggSignature = mcl.newG1();
+    let s0 = stateTree.root;
+    const pubkeys = [];
+    const witnesses = [];
+    for (let i = 0; i < batchSize; i++) {
+      const senderIndex = i % accountSize;
+      const reciverIndex = (i + 5) % accountSize;
+      const sender = accounts[senderIndex];
+      const receiver = accounts[reciverIndex];
+      const tx = new Tx0(sender.stateID, receiver.stateID, amount);
+      pubkeys.push(sender.encodePubkey());
+      witnesses.push(registry.witness(sender.accountID));
+      const signature = sender.sign(tx);
+      aggSignature = mcl.aggreagate(aggSignature, signature);
+      txs.push(tx);
+    }
+    let signature = mcl.g1ToHex(aggSignature);
+    let proof = stateTree.applyBatchType0(txs);
+    assert.isTrue(proof.safe);
+
+    const { serialized, commit } = serialize(txs);
+    assert.equal(commit, await fraudProof.txCommit(serialized));
+
+    const txRoot = calculateRoot(txs);
+    assert.equal(txRoot, await fraudProof.txRoot0(serialized));
+    let tx = await rollup.submitBatchType0(serialized, txRoot, stateTree.root, signature, {
+      from: coordinator,
+      value: STAKE,
+    });
+    console.log('submit batch gas cost:', tx.receipt.gasUsed);
+
+    const operationCost = await fraudProof.gasCostInvalidTransitionBatchType0.call(
+      s0,
+      stateTree.root,
+      proof,
+      serialized
+    );
+    console.log('operation gas cost:', operationCost.toNumber());
+
+    tx = await fraudProof.gasCostInvalidTransitionBatchType0(s0, stateTree.root, proof, serialized);
+    console.log('transaction gas cost:', tx.receipt.gasUsed);
+
+    const fraudProofCode = await fraudProof.shouldRollbackInvalidTransitionBatchType0(
+      s0,
+      stateTree.root,
+      proof,
+      serialized
+    );
+    // expect no fraud
+    assert.equal(0, fraudProofCode.toNumber());
+  });
+
   it('batch type 0: submit', async function () {
     let batchSize = 16;
     const txs: Tx0[] = [];
@@ -81,7 +143,10 @@ contract('Rollup transfer', (eth_accounts) => {
 
     const txRoot = calculateRoot(txs);
     assert.equal(txRoot, await fraudProof.txRoot0(serialized));
-    const tx = await rollup.submitBatchType0(serialized, txRoot, stateTree.root, signature, { from: coordinator });
+    const tx = await rollup.submitBatchType0(serialized, txRoot, stateTree.root, signature, {
+      from: coordinator,
+      value: STAKE,
+    });
 
     const blockNumber = tx.receipt.blockNumber;
     const batchIndex = 1;

@@ -20,33 +20,44 @@ contract('Rollup airdrop', (eth_accounts) => {
   let rollup: MockRollupInstance;
   let fraudProof: MockFraudProofInstance;
   let registry: AccountRegistry;
+  let stateTree: StateTree;
   const coordinator = eth_accounts[1];
   const accounts: Account[] = [];
   const tokenID = 1;
   const accountSize = 16;
-  let stateTree: StateTree;
+  const STAKE = web3.utils.toWei('1', 'gwei');
+  const DISPUTE_PERIOD = 10;
+  const initialBalance = 1000;
 
-  beforeEach(async function () {
+  before(async function () {
     await mcl.init();
     const registryContract = await BLSAccountRegistry.new();
     registry = await AccountRegistry.new(registryContract);
     fraudProof = await MockFraudProof.new(registryContract.address);
-    rollup = await MockRollup.new(0, 0, fraudProof.address, DUMMY_ADDRESS, ZERO); // yay :)
+    rollup = await MockRollup.new(STAKE, DISPUTE_PERIOD, fraudProof.address, DUMMY_ADDRESS, ZERO); // yay :)
     STATE_TREE_DEPTH = (await fraudProof.STATE_TREE_DEPTH()).toNumber();
     stateTree = StateTree.new(STATE_TREE_DEPTH);
     // create accounts
     for (let i = 0; i < accountSize; i++) {
       const accountID = i;
       const stateID = i;
-      const initialBalance = 100;
       const account = Account.new(accountID, tokenID, initialBalance, 0);
       account.setStateID(stateID);
-      stateTree.createAccount(stateID, account);
       account.newKeyPair();
       accounts.push(account);
       await registry.register(account.encodePubkey());
     }
   });
+
+  beforeEach(async function () {
+    rollup = await MockRollup.new(STAKE, DISPUTE_PERIOD, fraudProof.address, DUMMY_ADDRESS, ZERO); // yay :)
+    STATE_TREE_DEPTH = (await fraudProof.STATE_TREE_DEPTH()).toNumber();
+    stateTree = StateTree.new(STATE_TREE_DEPTH);
+    for (let i = 0; i < accountSize; i++) {
+      stateTree.createAccount(accounts[i]);
+    }
+  });
+
   it('submit airdrop', async function () {
     let batchSize = 16;
     const txs: Tx3[] = [];
@@ -76,7 +87,10 @@ contract('Rollup airdrop', (eth_accounts) => {
 
     const txRoot = calculateRoot(txs);
     assert.equal(txRoot, await fraudProof.txRoot3(serialized));
-    const tx = await rollup.submitBatchType3(serialized, txRoot, stateTree.root, signature, { from: coordinator });
+    const tx = await rollup.submitBatchType3(serialized, txRoot, stateTree.root, signature, {
+      from: coordinator,
+      value: STAKE,
+    });
 
     const blockNumber = tx.receipt.blockNumber;
     const batchIndex = 1;

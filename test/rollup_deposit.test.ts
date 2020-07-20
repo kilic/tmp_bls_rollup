@@ -3,7 +3,12 @@ const MockFraudProof = artifacts.require('MockFraudProof');
 const TokenRegistry = artifacts.require('TokenRegistry');
 const MockToken = artifacts.require('MockToken');
 import { Tree } from './app/tree';
-import { MockTokenInstance, MockRollupInstance, MockFraudProofInstance } from '../types/truffle-contracts';
+import {
+  MockTokenInstance,
+  MockRollupInstance,
+  MockFraudProofInstance,
+  TokenRegistryInstance,
+} from '../types/truffle-contracts';
 import { Tx1, Tx2, serialize, calculateRoot } from './app/tx';
 import { StateTree } from './app/state_tree';
 import { Account } from './app/state_account';
@@ -32,6 +37,7 @@ contract('Rollup deposit', (accounts) => {
   let rollup: MockRollupInstance;
   let fraudProof: MockFraudProofInstance;
   let token: MockTokenInstance;
+  let tokenRegistry: TokenRegistryInstance;
   let relayer = accounts[0];
   let coordinator = accounts[1];
   const tokenID = 1;
@@ -39,17 +45,21 @@ contract('Rollup deposit', (accounts) => {
   const challenger = accounts[2];
   const STAKE = web3.utils.toWei('1', 'gwei');
 
-  beforeEach(async function () {
+  before(async function () {
     token = await MockToken.new([relayer], [10000]);
-    const tokenRegistry = await TokenRegistry.new({ from: coordinator });
+    tokenRegistry = await TokenRegistry.new({ from: coordinator });
     await tokenRegistry.request(token.address, 1);
     await tokenRegistry.finalize(tokenID, { from: coordinator });
     fraudProof = await MockFraudProof.new(DUMMY_ADDRESS);
+    STATE_TREE_DEPTH = (await fraudProof.STATE_TREE_DEPTH()).toNumber();
+  });
+
+  beforeEach(async function () {
     rollup = await MockRollup.new(STAKE, DISPUTE_PERIOD, fraudProof.address, tokenRegistry.address, ZERO); // yay :)
     QUE_TREE_DEPTH = (await rollup.QUE_TREE_DEPTH()).toNumber();
     QUE_SIZE = 1 << QUE_TREE_DEPTH;
-    STATE_TREE_DEPTH = (await fraudProof.STATE_TREE_DEPTH()).toNumber();
   });
+
   it('que: deposit with new account', async function () {
     assert.equal(1, (await rollup.depositPointer()).toNumber());
     const accountID = 10;
@@ -275,7 +285,8 @@ contract('Rollup deposit', (accounts) => {
     // Because 'invalidStateTree' is not aware of this account
     const account = Account.new(5, tokenID, 100, 5);
     const stateID = 5;
-    stateTree.createAccount(stateID, account);
+    account.setStateID(stateID);
+    stateTree.createAccount(account);
 
     const queTree = Tree.new(QUE_TREE_DEPTH);
     const amount = 50;
@@ -499,7 +510,8 @@ contract('Rollup deposit', (accounts) => {
     for (let i = 0; i < txs.length; i++) {
       const accountID = i + 10;
       const account = Account.new(accountID, tokenID, 0, 0);
-      stateTree.createAccount(txs[i].stateID, account);
+      account.setStateID(txs[i].stateID);
+      stateTree.createAccount(account);
     }
     s0 = stateTree.root;
     proof = stateTree.applyBatchType2(txs);
@@ -583,7 +595,8 @@ contract('Rollup deposit', (accounts) => {
       const stateID = i;
       const accountID = i;
       const account = Account.new(accountID, tokenID, initialBalance, 0);
-      stateTree.createAccount(stateID, account);
+      account.setStateID(stateID);
+      stateTree.createAccount(account);
       let tx: Tx2;
       if (i == 5) {
         // let's make funny bussiness here
@@ -658,7 +671,8 @@ contract('Rollup deposit', (accounts) => {
       const stateID = i;
       const accountID = i;
       const account = Account.new(accountID, tokenID, initialBalance, 0);
-      stateTree.createAccount(stateID, account);
+      account.setStateID(stateID);
+      stateTree.createAccount(account);
       const tx = new Tx2(stateID, tokenID, amount);
       queTree.updateSingle(i, tx.hash());
       txs.push(tx);

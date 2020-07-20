@@ -30,8 +30,10 @@ contract('Withdraw', (eth_accounts) => {
     account = Account.new(burnerAccountID, tokenID, burnerInitialBalance, 0);
     const burningAccount = Account.new(0, tokenID, 0, 0); // FIX: use token id 0
     account.newKeyPair();
-    stateTree.createAccount(0, burningAccount);
-    stateTree.createAccount(burnerStateID, account);
+    burningAccount.setStateID(0);
+    stateTree.createAccount(burningAccount);
+    account.setStateID(burnerStateID);
+    stateTree.createAccount(account);
     await registry.register(account.encodePubkey());
     accountWitness = registry.witness(burnerAccountID);
   });

@@ -272,7 +272,7 @@ contract FraudProof is FraudProofTreeUtils {
     bytes32 s1,
     InvalidTransitionBatchType0 memory proof,
     bytes memory txs
-  ) external pure returns (uint256) {
+  ) public pure returns (uint256) {
     uint256 batchSize = txs.t0_size();
     require(batchSize > 0, "Rollup: empty batch");
     require(!txs.t0_hasExcessData(), "Rollup: excess tx data");

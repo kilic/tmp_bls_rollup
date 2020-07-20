@@ -12,7 +12,7 @@ contract('Tx Serialization', (accounts) => {
   });
 
   it('parse transaction t0', async function () {
-    const txSize = 1;
+    const txSize = 32;
     const txs: Tx0[] = [];
     for (let i = 0; i < txSize; i++) {
       txs.push(Tx0.rand());
