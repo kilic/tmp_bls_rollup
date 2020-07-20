@@ -28,14 +28,6 @@ function bn(n: number | string) {
   return web3.utils.toBN(n);
 }
 
-function bnTwoThird(n: BN) {
-  return n.mul(bn(2)).div(bn(3));
-}
-
-async function balBN(adr: string) {
-  return bn(await web3.eth.getBalance(adr));
-}
-
 contract('Rollup deposit', (accounts) => {
   let rollup: MockRollupInstance;
   let fraudProof: MockFraudProofInstance;
@@ -46,7 +38,6 @@ contract('Rollup deposit', (accounts) => {
   const DISPUTE_PERIOD = 10;
   const challenger = accounts[2];
   const STAKE = web3.utils.toWei('1', 'gwei');
-  const STAKE_IN_BN = bn(STAKE);
 
   beforeEach(async function () {
     token = await MockToken.new([relayer], [10000]);
